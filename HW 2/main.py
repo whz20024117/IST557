@@ -154,8 +154,8 @@ with multiprocessing.Pool(multiprocessing.cpu_count()) as p:
 
     best_crit, best_leaf, best_feature = best_row['crit'], best_row['leaf'], best_row['feature']
     best_para['RegularTree'] = {'criterion': best_crit,
-                                'min_samples_leaf': best_leaf,
-                                'max_features': best_feature}
+                                'min_samples_leaf': str(best_leaf),
+                                'max_features': str(best_feature)}
 
 
 # Plot Figures for submission
@@ -190,8 +190,8 @@ n_esti = [25, 50, 75, 100, 125, 150, 200, 300]
 
 
 def trainRandomForestCrossValidation(n):
-    train_err_list = []
-    val_err_list = []
+    train_acc_list = []
+    val_acc_list = []
     _kf = KFold(n_splits=5)
     for _train_index, _val_index in _kf.split(train_val_X):
         _X = train_val_X[_train_index, :]
@@ -204,39 +204,54 @@ def trainRandomForestCrossValidation(n):
                                        min_samples_leaf=best_leaf,
                                        max_features=best_feature)
         _rndf.fit(_X, _Y)
-        train_err_list.append(1 - _rndf.score(_X, _Y))
-        val_err_list.append(1 - _rndf.score(_X_val, _Y_val))
+        train_acc_list.append(_rndf.score(_X, _Y))
+        val_acc_list.append(_rndf.score(_X_val, _Y_val))
 
-    _avg_train_err = sum(train_err_list) / len(train_err_list)
-    _avg_val_err = sum(val_err_list) / len(val_err_list)
+    _avg_train_acc = sum(train_acc_list) / len(train_acc_list)
+    _avg_val_acc = sum(val_acc_list) / len(val_acc_list)
 
-    return n, _avg_train_err, _avg_val_err
+    _std_train_acc = np.std(train_acc_list)
+    _std_val_acc = np.std(val_acc_list)
+
+    return n, _avg_train_acc, _avg_val_acc, _std_train_acc, _std_val_acc
 
 
 with multiprocessing.Pool(multiprocessing.cpu_count()) as p:
     results = p.map(trainRandomForestCrossValidation, n_esti)
     results_df = pd.DataFrame(results,
-                              columns=('n', 'avg_train_err', 'avg_val_err'))
+                              columns=('n', 'avg_train_acc', 'avg_val_acc',
+                                       'std_train_acc', 'std_val_acc'))
     result_log['RandomForest'] = results_df
 
     # Find best combination
-    best_row_id = results_df['avg_val_err'].argmin()
+    best_row_id = results_df['avg_val_acc'].argmax()
     best_row = results_df.iloc[best_row_id]
 
     best_n = best_row['n']
-    best_para['RandomForest'] = {'Best_n_estimator': best_n}
+    best_para['RandomForest'] = {'Best_n_estimator': str(best_n)}
 
 
 
 ############ Plot figure ############
 print('Plot Figure....')
 plt.clf()
-plt.plot(n_esti, results_df['avg_train_err'], marker='.', label="Average Training Error")
-plt.plot(n_esti, results_df['avg_val_err'], marker='.', label="Average Validation Error")
+plt.plot(n_esti, results_df['avg_train_acc'], marker='.', label="Average Training Accuracy")
+plt.plot(n_esti, results_df['avg_val_acc'], marker='.', label="Average Validation Accuracy")
 plt.legend()
 plt.xlabel('Number of Trees')
-plt.ylabel('Average Error')
-plt.title('Random forest error VS Number of trees')
+plt.ylabel('Average Accuracy')
+plt.title('Random forest accuracy VS Number of trees')
+plt.savefig('./submissions/3d.png')
+
+#STD
+plt.clf()
+plt.plot(n_esti, results_df['std_train_acc'], marker='.', label="Training Accuracy Standard Deviation")
+plt.plot(n_esti, results_df['std_val_acc'], marker='.', label="Validation Accuracy Standard Deviation")
+plt.legend()
+plt.xlabel('Number of Trees')
+plt.ylabel('Accuracy Standard Deviation')
+plt.title('Random forest Accuracy Standard Deviation VS Number of trees')
+plt.savefig('./submissions/3d_std.png')
 
 
 
@@ -248,12 +263,15 @@ print('***************** Train XGBoost Model *******************')
 
 
 lrs = [0.001, 0.01, 0.1, 0.15, 0.2, 0.3]
-train_err_all = []
-val_err_all = []
+train_acc_all = []
+val_acc_all = []
+
+train_acc_std = []
+val_acc_std = []
 
 for lr in lrs:
-    train_err_list = []
-    val_err_list = []
+    train_acc_list = []
+    val_acc_list = []
     kf = KFold(n_splits=5)
     for train_index, val_index in kf.split(train_val_X):
         X = train_val_X[train_index, :]
@@ -261,36 +279,49 @@ for lr in lrs:
         Y = train_val_Y[train_index]
         Y_val = train_val_Y[val_index]
 
-        clf = xgb.XGBClassifier(n_estimators=int(best_n), learning_rate=lr,nthread=multiprocessing.cpu_count())
+        clf = xgb.XGBClassifier(n_estimators=int(best_n), learning_rate=lr, nthread=multiprocessing.cpu_count())
 
         clf.fit(X, Y)
-        train_err_list.append(1 - clf.score(X, Y))
-        val_err_list.append(1 - clf.score(X_val, Y_val))
+        train_acc_list.append(clf.score(X, Y))
+        val_acc_list.append(clf.score(X_val, Y_val))
 
-    train_err_all.append(sum(train_err_list) / len(train_err_list))
-    val_err_all.append(sum(val_err_list) / len(val_err_list))
+    train_acc_all.append(sum(train_acc_list) / len(train_acc_list))
+    val_acc_all.append(sum(val_acc_list) / len(val_acc_list))
+    train_acc_std.append(np.std(train_acc_list))
+    val_acc_std.append(np.std(val_acc_list))
 
-results_df = pd.DataFrame(zip(lrs, train_err_all, val_err_all),
-                          columns=('lr', 'avg_train_err', 'avg_val_err'))
+results_df = pd.DataFrame(zip(lrs, train_acc_all, val_acc_all, train_acc_std, val_acc_std),
+                          columns=('lr', 'avg_train_acc', 'avg_val_acc',
+                                   'train_acc_std', 'val_acc_std'))
 result_log['XGBoost'] = results_df
 
 # Find best combination
-best_row_id = results_df['avg_val_err'].argmin()
+best_row_id = results_df['avg_val_acc'].argmax()
 best_row = results_df.iloc[best_row_id]
 
 best_lr = best_row['lr']
-best_para['XGBoost'] = {'Best_lr': str(best_n)}
+best_para['XGBoost'] = {'Best_lr': str(best_lr)}
 
 
 ############ Plot figure ############
 print('Plot Figure....')
 plt.clf()
-plt.plot(lrs, results_df['avg_train_err'], marker='.', label="Average Training Error")
-plt.plot(lrs, results_df['avg_val_err'], marker='.', label="Average Validation Error")
+plt.plot(lrs, results_df['avg_train_acc'], marker='.', label="Training Accuracy Standard Deviation")
+plt.plot(lrs, results_df['avg_val_acc'], marker='.', label="Validation Accuracy Standard Deviation")
 plt.legend()
 plt.xlabel('Learning Rate')
-plt.ylabel('Average Error')
-plt.title('XGBoost error VS Learning Rate')
+plt.ylabel('Accuracy Standard Deviation')
+plt.title('XGBoost Accuracy Standard Deviation VS Learning Rate')
+plt.savefig('./submissions/4d_std.png')
+
+#STD
+plt.clf()
+plt.plot(lrs, results_df['std_train_acc'], marker='.', label="Average Training Accuracy")
+plt.plot(lrs, results_df['std_val_acc'], marker='.', label="Average Validation Accuracy")
+plt.legend()
+plt.xlabel('Learning Rate')
+plt.ylabel('Average Accuracy')
+plt.title('XGBoost Accuracy VS Learning Rate')
 plt.savefig('./submissions/4d.png')
 
 

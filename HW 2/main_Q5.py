@@ -17,10 +17,10 @@ with open('./submissions/results.pkl', 'rb') as f:
 print("Print best result each model can achieve: ")
 best_err_reg = result_log['RegularTree']['avg_val_err'].min()
 print("    Error rate using RegularTree: {:.4f}".format(best_err_reg))
-best_err_rndf = result_log['RandomForest']['avg_val_err'].min()
-print("    Error rate using RandomForest: {:.4f}".format(best_err_rndf))
-best_err_xgb = result_log['XGBoost']['avg_val_err'].min()
-print("    Error rate using XGBoost: {:.4f}".format(best_err_xgb))
+best_acc_rndf = result_log['RandomForest']['avg_val_acc'].max()
+print("    Accuracy using RandomForest: {:.4f}".format(best_acc_rndf))
+best_acc_xgb = result_log['XGBoost']['avg_val_acc'].max()
+print("    Accuracy using XGBoost: {:.4f}".format(best_acc_xgb))
 
 # Using XGBoost
 import xgboost as xgb
@@ -56,7 +56,7 @@ Y = train_val_Y[idx]
 # Train
 clf.fit(X, Y)
 # Test
-print("Error rate on training set: ", 1 - clf.score(X, Y))
+print("Accuracy on training set: ", clf.score(X, Y))
 test_label = clf.predict(test_X)
 
 label_csv = pd.DataFrame(zip(test_df['ArticleId'].tolist(), le.inverse_transform(test_label)))
