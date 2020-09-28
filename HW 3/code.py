@@ -334,8 +334,13 @@ def q5():
     clf = RandomForestClassifier(n_estimators=450, n_jobs=-1)
     clf.fit(X, y)
 
-    y_hat = clf.predict(X_test)
+    acc = clf.score(X, y)
+    auc = roc_auc_score(y, clf.predict_proba(X)[:, 1])
 
+    print("    Training Accuracy is: {:.4f}".format(acc))
+    print("    Training ROC-AUC is: {:.4f}".format(auc))
+
+    y_hat = clf.predict(X_test)
     np.savetxt('./results/Haizhou_Wang_labels.csv', y_hat.astype(int), fmt='%s')
 
 
