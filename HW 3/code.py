@@ -9,8 +9,9 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.dummy import DummyClassifier
 from sklearn.model_selection import KFold
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, plot_roc_curve
 from imblearn.over_sampling import SMOTE
+from matplotlib import pyplot as plt
 
 
 
@@ -206,37 +207,37 @@ def q3():
     idx = np.random.permutation(range(len(X)))
     X, y = X[idx], y[idx]
 
-    # # Random forest---------------------------------------------------------------------------------
-    # n_estimator_list = [100, 200, 300, 450]
-    # score_list = []
-    #
-    # print("RandomForest Results: ")
-    # for p in n_estimator_list:
-    #     print("    {} is: {}".format('n_estimators', p))
-    #     auc_scores = _auc_training_process(RandomForestClassifier, X, y,
-    #                                        n_estimators=p,
-    #                                        n_jobs=-1)
-    #     _print_results(auc_scores)
-    #     score_list.append(auc_scores)
-    #
-    # _save_results('./results/Q3_RandomForest.csv', score_list, p_name='n_estimators', p=n_estimator_list)
-    # print("\n")
-    #
-    # # XGBOOST--------------------------------------------------------------------------------------------
-    # learning_rate_list = [0.01, 0.1, 0.25]
-    # score_list = []
-    #
-    # print("XGBoost Results: ")
-    # for p in learning_rate_list:
-    #     print("    {} is: {}".format('learning_rate', p))
-    #     auc_scores = _auc_training_process(XGBClassifier, X, y,
-    #                                        learning_rate=p)
-    #
-    #     _print_results(auc_scores)
-    #     score_list.append(auc_scores)
-    #
-    # _save_results('./results/Q3_xgb.csv', score_list, p_name='learning_rate', p=learning_rate_list)
-    # print("\n")
+    # Random forest---------------------------------------------------------------------------------
+    n_estimator_list = [100, 200, 300, 450]
+    score_list = []
+
+    print("RandomForest Results: ")
+    for p in n_estimator_list:
+        print("    {} is: {}".format('n_estimators', p))
+        auc_scores = _auc_training_process(RandomForestClassifier, X, y,
+                                           n_estimators=p,
+                                           n_jobs=-1)
+        _print_results(auc_scores)
+        score_list.append(auc_scores)
+
+    _save_results('./results/Q3_RandomForest.csv', score_list, p_name='n_estimators', p=n_estimator_list)
+    print("\n")
+
+    # XGBOOST--------------------------------------------------------------------------------------------
+    learning_rate_list = [0.01, 0.1, 0.25]
+    score_list = []
+
+    print("XGBoost Results: ")
+    for p in learning_rate_list:
+        print("    {} is: {}".format('learning_rate', p))
+        auc_scores = _auc_training_process(XGBClassifier, X, y,
+                                           learning_rate=p)
+
+        _print_results(auc_scores)
+        score_list.append(auc_scores)
+
+    _save_results('./results/Q3_xgb.csv', score_list, p_name='learning_rate', p=learning_rate_list)
+    print("\n")
 
     # SVM-----------------------------------------------------------------------------------------------
     c_list = [0.1, 1.0, 10.0]
@@ -250,7 +251,7 @@ def q3():
         _print_results(auc_scores)
         score_list.append(auc_scores)
 
-    _save_results('./results/Q2_SVM.csv', score_list, p_name='C', p=c_list)
+    _save_results('./results/Q3_SVM.csv', score_list, p_name='C', p=c_list)
     print("\n")
 
     # KNN--------------------------------------------------------------------------------------
@@ -281,8 +282,69 @@ def q3():
     print("\n")
 
 
+def q4():
+    X, y = _load_shuffle_data('./data/credit_card_train.csv')
+    print("Number of data samples: {}".format(len(X)))
+    sampler = SMOTE(random_state=0)
+    X, y = sampler.fit_resample(X, y)
+    print("Number of data samples after resample: {}".format(len(X)))
+    # Shuffle Data
+    np.random.seed(10)
+    idx = np.random.permutation(range(len(X)))
+    X, y = X[idx], y[idx]
+
+    # Training start here:
+    print("Using Random Forest")
+
+    # 5 fold cv
+    kf = KFold(n_splits=5)
+
+    fold = 0
+    for i_train, i_test in kf.split(X):
+        print("Fold {}...... ".format(fold))
+        train_X, train_y = X[i_train], y[i_train]
+        test_X, test_y = X[i_test], y[i_test]
+
+        clf = RandomForestClassifier(n_estimators=450, n_jobs=-1)
+        clf.fit(train_X, train_y)
+
+        plot_roc_curve(clf, test_X, test_y)
+        plt.title("Fold {}".format(fold+1))
+        plt.savefig('./results/Q4_{}.png'.format(fold))
+        fold += 1
+
+
+def q5():
+    X, y = _load_shuffle_data('./data/credit_card_train.csv')
+    print("Number of data samples: {}".format(len(X)))
+    sampler = SMOTE(random_state=0)
+    X, y = sampler.fit_resample(X, y)
+    print("Number of data samples after resample: {}".format(len(X)))
+    # Shuffle Data
+    np.random.seed(10)
+    idx = np.random.permutation(range(len(X)))
+    X, y = X[idx], y[idx]
+
+    test_df = pd.read_csv('./data/credit_card_test.csv')
+    X_test = test_df.to_numpy()
+
+    # Training start here:
+    print("Using Random Forest")
+
+    clf = RandomForestClassifier(n_estimators=450, n_jobs=-1)
+    clf.fit(X, y)
+
+    y_hat = clf.predict(X_test)
+
+    np.savetxt('./results/Haizhou_Wang_labels.csv', y_hat.astype(int), fmt='%s')
+
+
 if __name__ == '__main__':
     # q1()
     # q2()
-    q3()
+    # q3()
+    # q4()
+    q5()
+
+    exit()
 
