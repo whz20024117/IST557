@@ -14,7 +14,6 @@ from imblearn.over_sampling import SMOTE
 from matplotlib import pyplot as plt
 
 
-
 # Helper functions
 def _load_shuffle_data(path, seed=0):
     df = pd.read_csv(path)
@@ -28,12 +27,13 @@ def _load_shuffle_data(path, seed=0):
     return X[idx], y[idx]
 
 
-def _auc_training_process(clf_class, X, y, **kwargs):
+def _auc_training_process(clf_class, X, y, smote=False, **kwargs):
     """
     :param clf_class: sklearn-style classifier class
     :param X: training data
     :param y: label
     :param kwargs: arguments pass to classifier class __init__
+    :param smote: whether to use smote
     :return: list: rain_auc_scores, list: auc_scores
     """
 
@@ -44,6 +44,13 @@ def _auc_training_process(clf_class, X, y, **kwargs):
 
     for i_train, i_test in kf.split(X):
         train_X, train_y = X[i_train], y[i_train]
+        if smote:
+            sampler = SMOTE(random_state=0)
+            train_X, train_y = sampler.fit_resample(train_X, train_y)
+            # Shuffle after smote
+            np.random.seed(10)
+            idx = np.random.permutation(range(len(X)))
+            train_X, train_y = train_X[idx], train_y[idx]
         test_X, test_y = X[i_test], y[i_test]
 
         clf = clf_class(**kwargs)
@@ -55,14 +62,7 @@ def _auc_training_process(clf_class, X, y, **kwargs):
     return auc_scores
 
 
-def _svm_training_process(X, y, C):
-    """
-    :param clf_class: sklearn-style classifier class
-    :param X: training data
-    :param y: label
-    :param kwargs: arguments pass to classifier class __init__
-    :return: list: rain_auc_scores, list: auc_scores
-    """
+def _svm_training_process(X, y, C, smote=False):
 
     # 5 fold cv
     kf = KFold(n_splits=5)
@@ -71,6 +71,14 @@ def _svm_training_process(X, y, C):
 
     for i_train, i_test in kf.split(X):
         train_X, train_y = X[i_train], y[i_train]
+        if smote:
+            sampler = SMOTE(random_state=0)
+            train_X, train_y = sampler.fit_resample(train_X, train_y)
+            # Shuffle after smote
+            np.random.seed(10)
+            idx = np.random.permutation(range(len(X)))
+            train_X, train_y = train_X[idx], train_y[idx]
+
         test_X, test_y = X[i_test], y[i_test]
 
         clf = make_pipeline(StandardScaler(), SVC(C=C, probability=True))
@@ -128,7 +136,7 @@ def q2():
     print("RandomForest Results: ")
     for p in n_estimator_list:
         print("    {} is: {}".format('n_estimators', p))
-        auc_scores = _auc_training_process(RandomForestClassifier, X, y,
+        auc_scores = _auc_training_process(RandomForestClassifier, X, y, smote=False,
                                            n_estimators=p,
                                            n_jobs=-1)
         _print_results(auc_scores)
@@ -144,7 +152,7 @@ def q2():
     print("XGBoost Results: ")
     for p in learning_rate_list:
         print("    {} is: {}".format('learning_rate', p))
-        auc_scores = _auc_training_process(XGBClassifier, X, y,
+        auc_scores = _auc_training_process(XGBClassifier, X, y, smote=False,
                                            learning_rate=p)
 
         _print_results(auc_scores)
@@ -160,7 +168,7 @@ def q2():
     print("SVM Results: ")
     for p in c_list:
         print("    {} is: {}".format('C', p))
-        auc_scores = _svm_training_process(X, y, p)
+        auc_scores = _svm_training_process(X, y, p, smote=False)
 
         _print_results(auc_scores)
         score_list.append(auc_scores)
@@ -175,7 +183,7 @@ def q2():
     print("KNN Results: ")
     for p in n_neighbors_list:
         print("    {} is: {}".format('n_neighbors', p))
-        auc_scores = _auc_training_process(KNeighborsClassifier, X, y,
+        auc_scores = _auc_training_process(KNeighborsClassifier, X, y, smote=False,
                                            n_neighbors=p)
 
         _print_results(auc_scores)
@@ -188,7 +196,7 @@ def q2():
     score_list = []
 
     print("Naive Bayes Results: ")
-    auc_scores = _auc_training_process(GaussianNB, X, y)
+    auc_scores = _auc_training_process(GaussianNB, X, y, smote=False,)
     score_list.append(auc_scores)
 
     _print_results(auc_scores)
@@ -199,13 +207,6 @@ def q2():
 def q3():
     X, y = _load_shuffle_data('./data/credit_card_train.csv')
     print("Number of data samples: {}".format(len(X)))
-    sampler = SMOTE(random_state=0)
-    X, y = sampler.fit_resample(X, y)
-    print("Number of data samples after resample: {}".format(len(X)))
-    # Shuffle Data
-    np.random.seed(10)
-    idx = np.random.permutation(range(len(X)))
-    X, y = X[idx], y[idx]
 
     # Random forest---------------------------------------------------------------------------------
     n_estimator_list = [100, 200, 300, 450]
@@ -214,7 +215,7 @@ def q3():
     print("RandomForest Results: ")
     for p in n_estimator_list:
         print("    {} is: {}".format('n_estimators', p))
-        auc_scores = _auc_training_process(RandomForestClassifier, X, y,
+        auc_scores = _auc_training_process(RandomForestClassifier, X, y, smote=True,
                                            n_estimators=p,
                                            n_jobs=-1)
         _print_results(auc_scores)
@@ -230,7 +231,7 @@ def q3():
     print("XGBoost Results: ")
     for p in learning_rate_list:
         print("    {} is: {}".format('learning_rate', p))
-        auc_scores = _auc_training_process(XGBClassifier, X, y,
+        auc_scores = _auc_training_process(XGBClassifier, X, y, smote=True,
                                            learning_rate=p)
 
         _print_results(auc_scores)
@@ -246,7 +247,8 @@ def q3():
     print("SVM Results: ")
     for p in c_list:
         print("    {} is: {}".format('C', p))
-        auc_scores = _svm_training_process(X[:50000], y[:50000], p)  # Downsampled due to high computation cost on svm
+        # Downsampled due to high computation cost on svm
+        auc_scores = _svm_training_process(X[:50000], y[:50000], p, smote=True)
 
         _print_results(auc_scores)
         score_list.append(auc_scores)
@@ -261,7 +263,7 @@ def q3():
     print("KNN Results: ")
     for p in n_neighbors_list:
         print("    {} is: {}".format('n_neighbors', p))
-        auc_scores = _auc_training_process(KNeighborsClassifier, X, y,
+        auc_scores = _auc_training_process(KNeighborsClassifier, X, y, smote=True,
                                            n_neighbors=p)
 
         _print_results(auc_scores)
@@ -274,7 +276,7 @@ def q3():
     score_list = []
 
     print("Naive Bayes Results: ")
-    auc_scores = _auc_training_process(GaussianNB, X, y)
+    auc_scores = _auc_training_process(GaussianNB, X, y, smote=True)
     score_list.append(auc_scores)
 
     _print_results(auc_scores)
@@ -285,16 +287,9 @@ def q3():
 def q4():
     X, y = _load_shuffle_data('./data/credit_card_train.csv')
     print("Number of data samples: {}".format(len(X)))
-    sampler = SMOTE(random_state=0)
-    X, y = sampler.fit_resample(X, y)
-    print("Number of data samples after resample: {}".format(len(X)))
-    # Shuffle Data
-    np.random.seed(10)
-    idx = np.random.permutation(range(len(X)))
-    X, y = X[idx], y[idx]
 
     # Training start here:
-    print("Using Random Forest")
+    print("Using XGBoost")
 
     # 5 fold cv
     kf = KFold(n_splits=5)
@@ -303,9 +298,17 @@ def q4():
     for i_train, i_test in kf.split(X):
         print("Fold {}...... ".format(fold))
         train_X, train_y = X[i_train], y[i_train]
+        sampler = SMOTE(random_state=0)
+        train_X, train_y = sampler.fit_resample(train_X, train_y)
+        print("Number of data samples after resample: {}".format(len(X)))
+        # Shuffle Data
+        np.random.seed(10)
+        idx = np.random.permutation(range(len(X)))
+        train_X, train_y = train_X[idx], train_y[idx]
+
         test_X, test_y = X[i_test], y[i_test]
 
-        clf = RandomForestClassifier(n_estimators=450, n_jobs=-1)
+        clf = XGBClassifier(learning_rate=0.25, n_estimators=1000)
         clf.fit(train_X, train_y)
 
         plot_roc_curve(clf, test_X, test_y)
@@ -329,11 +332,12 @@ def q5():
     X_test = test_df.to_numpy()
 
     # Training start here:
-    print("Using Random Forest")
+    print("Using XGB")
 
-    clf = RandomForestClassifier(n_estimators=450, n_jobs=-1)
+    clf = XGBClassifier(learning_rate=0.25, n_estimators=1000)
     clf.fit(X, y)
 
+    X, y = _load_shuffle_data('./data/credit_card_train.csv')
     acc = clf.score(X, y)
     auc = roc_auc_score(y, clf.predict_proba(X)[:, 1])
 
@@ -345,10 +349,10 @@ def q5():
 
 
 if __name__ == '__main__':
-    # q1()
-    # q2()
-    # q3()
-    # q4()
+    q1()
+    q2()
+    q3()
+    q4()
     q5()
 
     exit()
