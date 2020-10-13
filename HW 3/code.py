@@ -344,15 +344,15 @@ def q5():
     print("    Training Accuracy is: {:.4f}".format(acc))
     print("    Training ROC-AUC is: {:.4f}".format(auc))
 
-    y_hat = clf.predict(X_test)
-    np.savetxt('./results/Haizhou_Wang_labels.csv', y_hat.astype(int), fmt='%s')
+    y_hat = clf.predict_proba(X_test)[:, 1]
+    np.savetxt('./results/Haizhou_Wang_labels.csv', y_hat.astype(float), fmt='%.16f')
 
 
 if __name__ == '__main__':
-    q1()
-    q2()
-    q3()
-    q4()
+    # q1()
+    # q2()
+    # q3()
+    # q4()
     q5()
 
     exit()
