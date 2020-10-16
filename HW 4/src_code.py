@@ -286,6 +286,7 @@ class Q6Net(nn.Module):
         super(Q6Net, self).__init__()
         self.step = step
         self.edge = edge
+        self.dropout = dropout
         self.conv = nn.Sequential(nn.Conv2d(1, 32, 3),
                                   nn.ReLU()
                                   )
@@ -321,9 +322,11 @@ class Q6Net(nn.Module):
         assert out.shape[1] == self.step
 
         out, _ = self.rnn(out)
-        out = nn.functional.relu(self.fc1(out))
-        out = nn.functional.relu(self.fc2(out))
         out = out[:, -1, :]
+        out = nn.functional.relu(self.fc1(out))
+        out = nn.functional.dropout(out, self.dropout, self.training)
+        out = nn.functional.relu(self.fc2(out))
+        out = nn.functional.dropout(out, self.dropout, self.training)
         out = torch.cat((out, times, locations), 1)
         out = nn.functional.relu(self.fc3(out))
         out = self.fc4(out)
@@ -333,7 +336,7 @@ def q6():
     BATCH_SIZE = 32
     LR = 0.001
     EPOCH = 120
-    save_path = './save/q6_2.tar'
+    save_path = './save/q6_3.tar'
 
     x, y, locations, times = load_data('./data/train.npz')
     x_val, y_val, loc_val, t_val = load_data('./data/val.npz')
@@ -347,7 +350,7 @@ def q6():
     loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
 
     # Construct Model
-    model = Q6Net(x.shape[1], edge=7, dropout=0.3)
+    model = Q6Net(x.shape[1], edge=7, dropout=0.4)
     if torch.cuda.is_available():
         model.cuda()
 
@@ -431,7 +434,7 @@ if __name__ == '__main__':
     # q4q5_test('./results/q4.txt', './save/q4.tar', use_lstm=False)
     # q5_train()
     # q4q5_test('./results/q5.txt', './save/q5.tar', use_lstm=True)
-    # q6()
-    q6_test('./results/q6.txt', './save/q6.tar')
+    q6()
+    q6_test('./results/q6_3.txt', './save/q6_3.tar')
 
     pass
