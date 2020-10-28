@@ -126,88 +126,117 @@ def q5():
 
     callbacks = [tf.keras.callbacks.ModelCheckpoint(save_path, save_best_only=True, save_weights_only=True)]
 
-    model.fit(x, y, batch_size=32, epochs=100, callbacks=callbacks, validation_data=(x_val, y_val))
+    # model.fit(x, y, batch_size=32, epochs=100, callbacks=callbacks, validation_data=(x_val, y_val))
 
     # Test
     model.load_weights(save_path)
     y_hat = model.predict(x_val)
+    y_hat = np.clip(y_hat, 0.0, None).reshape(-1)
     result = rmse(y_val, y_hat)
 
     export_result('./norm_results/q5.txt', result)
 
 
-class Q6Model(tf.keras.Model):
-    def __init__(self, step, edge, dropout=0.0):
-        super(Q6Model, self).__init__()
-        self.convlstm = tf.keras.Sequential([
-            layers.ConvLSTM2D(256, 3, input_shape=(step, edge, edge, 1), return_sequences=True, dropout=dropout),
-            layers.ConvLSTM2D(128, 3, dropout=dropout),
-            layers.Dropout(dropout),
-            layers.Dense(256, activation='relu'),
-            layers.Dense(64, activation='relu')
-        ])
-
-        self.fcs = tf.keras.Sequential([
-            layers.Dense(64, activation='relu'),
-            layers.Dense(1)
-        ])
-
-    def call(self, inputs):
-        x, t, loc = inputs
-        out = self.convlstm(x)
-        out = tf.concat([out, t, loc], axis=1)
-        out = self.fcs(out)
-
-        return out
-
-
-
-
 def q6():
-    save_path = './norm_save/q6/'
+    save_path = './norm_save/q6_3/'
 
     x, y, locations, times = load_data('./norm_data/train.npz')
     x = x.reshape(-1, x.shape[1], 7, 7)
-    locations = locations.reshape(x.shape[0], -1)
+    locations = locations.reshape(x.shape[0], -1) / 9.0
+    times = times / 24
     x_val, y_val, loc_val, t_val = load_data('./norm_data/val.npz')
     x_val = x_val.reshape(-1, x.shape[1], 7, 7)
-    loc_val = loc_val.reshape(x_val.shape[0], -1)
+    loc_val = loc_val.reshape(x_val.shape[0], -1) / 9.0
+    t_val = t_val / 24
 
     # Nets
-    dropout = 0.25
+    dropout = 0.3
     x_in = tf.keras.Input(shape=(x.shape[1], 7, 7, 1))
-    t_in = tf.keras.Input(shape=(1,))
-    loc_in = tf.keras.Input(shape=(2,))
+    # t_in = tf.keras.Input(shape=(1,))
+    # loc_in = tf.keras.Input(shape=(2,))
 
-    out = layers.ConvLSTM2D(256, 3, return_sequences=True)(x_in)
-    out = layers.Dropout(dropout)(out)
-    out = layers.ConvLSTM2D(128, 3, dropout=dropout)(out)
+    out = layers.ConvLSTM2D(256, 3)(x_in)
+    # out = layers.Dropout(dropout)(out)
+    # out = layers.ConvLSTM2D(128, 3, dropout=dropout)(out)
     out = layers.Dropout(dropout)(out)
     out = layers.Flatten()(out)
     out = layers.Dense(256, activation='relu')(out)
-    out = layers.Dense(32, activation='relu')(out)
-
-    out = layers.Concatenate(axis=-1)([out, t_in, loc_in])
-    out = layers.Dense(256, activation='relu')(out)
+    out = layers.Dense(64, activation='relu')(out)
     out = layers.Dense(1)(out)
 
-    # model = Q6Model(step=x.shape[1], edge=7, dropout=0.25)
-    model = tf.keras.Model(inputs=[x_in, t_in, loc_in], outputs=out)
+    model = tf.keras.Model(inputs=x_in, outputs=out)
 
     model.compile(optimizer='adam', loss=root_mean_squared_error)
     model.summary()
 
-    callbacks = [tf.keras.callbacks.ModelCheckpoint(save_path, save_best_only=True, save_weights_only=True)]
+    modelckpt = tf.keras.callbacks.ModelCheckpoint(save_path, save_best_only=True, save_weights_only=True)
 
-    model.fit([x, times, locations], y, batch_size=32, epochs=100, callbacks=callbacks,
-              validation_data=([x_val, t_val, loc_val], y_val))
+    # model.fit(x, y, batch_size=64, epochs=100, callbacks=[modelckpt],
+    #           validation_data=(x_val, y_val))
 
     # Test
     model.load_weights(save_path)
-    y_hat = model.predict([x_val, t_val, loc_val])
+    y_hat = model.predict(x_val)
+    y_hat = np.clip(y_hat, 0.0, None).reshape(-1)
     result = rmse(y_val, y_hat)
 
-    export_result('./norm_results/q6.txt', result)
+    export_result('./norm_results/q6_3.txt', result)
+
+
+def q6_export():
+    data = np.load('./norm_data/test.npz')
+    x = data['x']
+    # locations = data['locations']
+    # times = data['times']
+    data.close()
+
+    # Use model from q5
+    save_path = './norm_save/q5/'
+    model = tf.keras.Sequential([
+        layers.LSTM(128, input_shape=(x.shape[1], x.shape[2])),
+        layers.Dropout(0.2),
+        layers.Dense(256, activation='relu'),
+        layers.Dense(64, activation='relu'),
+        layers.Dense(1)
+    ])
+
+    ##################### Q6 Model ####################################
+    # save_path = './norm_save/q6_3/'
+    #
+    # x, y, locations, times = load_data('./norm_data/train.npz')
+    # x = x.reshape(-1, x.shape[1], 7, 7)
+    # locations = locations.reshape(x.shape[0], -1) / 9.0
+    # times = times / 24
+    # x_val, y_val, loc_val, t_val = load_data('./norm_data/val.npz')
+    # x_val = x_val.reshape(-1, x.shape[1], 7, 7)
+    # loc_val = loc_val.reshape(x_val.shape[0], -1) / 9.0
+    # t_val = t_val / 24
+    #
+    # # Nets
+    # dropout = 0.3
+    # x_in = tf.keras.Input(shape=(x.shape[1], 7, 7, 1))
+    # # t_in = tf.keras.Input(shape=(1,))
+    # # loc_in = tf.keras.Input(shape=(2,))
+    #
+    # out = layers.ConvLSTM2D(256, 3)(x_in)
+    # # out = layers.Dropout(dropout)(out)
+    # # out = layers.ConvLSTM2D(128, 3, dropout=dropout)(out)
+    # out = layers.Dropout(dropout)(out)
+    # out = layers.Flatten()(out)
+    # out = layers.Dense(256, activation='relu')(out)
+    # out = layers.Dense(64, activation='relu')(out)
+    # out = layers.Dense(1)(out)
+    #
+    # model = tf.keras.Model(inputs=x_in, outputs=out)
+    ###################################################################
+
+    model.compile(optimizer='adam', loss=root_mean_squared_error)
+
+    model.load_weights(save_path)
+    y_hat = model.predict(x)
+    y_hat = np.clip(y_hat, 0.0, None).reshape(-1)
+    np.savetxt('./norm_results/Haizhou_Wang_labels.csv', y_hat.astype(float), fmt='%.16f')
+
 
 
 if __name__ == '__main__':
@@ -216,4 +245,5 @@ if __name__ == '__main__':
     # q3()
     # q4()
     # q5()
-    q6()
+    # q6()
+    q6_export()
