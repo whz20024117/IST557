@@ -75,13 +75,32 @@ test_X_df['attr_score'] = test_all.swifter.apply(normAvgWordCountAttr, axis=1)
 #
 # X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.33, random_state=0)
 #
-# reg = XGBRegressor(learning_rate=0.1, n_estimators=1500)
+# reg = XGBRegressor(learning_rate=0.25,
+#                    eval_metric='rmse',
+#                    max_depth=2,
+#                    reg_lambda=100.0,
+#                    n_estimators=150,
+#                    verbosity=0)
 # reg.fit(X_train, y_train)
 #
 # # Test
 # print("Testing....")
 # pred = reg.predict(X_val)
 # err = mean_squared_error(y_val, pred, squared=False)
+
+
+########################## LR ####################
+# from sklearn.linear_model import LinearRegression
+# print("\nStart LR")
+# X = X_df[['title_score', 'description_score', 'attr_score']].to_numpy()
+# y = y_df[['relevance']].to_numpy()
+#
+# X_test = test_X_df[['title_score', 'description_score', 'attr_score']].to_numpy()
+#
+# reg = LinearRegression()
+# reg.fit(X, y)
+#
+# pred = reg.predict(X_test).flatten().clip(0,3)
 
 
 ########################## Submission ####################
@@ -91,10 +110,15 @@ y = y_df[['relevance']].to_numpy()
 
 X_test = test_X_df[['title_score', 'description_score', 'attr_score']].to_numpy()
 
-reg = XGBRegressor(learning_rate=0.1, n_estimators=1500)
+reg = XGBRegressor(learning_rate=0.25,
+                   eval_metric='rmse',
+                   max_depth=2,
+                   reg_lambda=100.0,
+                   n_estimators=150,
+                   verbosity=0)
 reg.fit(X, y)
 
-pred = reg.predict(X_test)
+pred = reg.predict(X_test).flatten().clip(0,3)
 
 sample_submission = pd.read_csv('data/sample_submission.csv.zip')
 submission = pd.DataFrame(columns=sample_submission.columns)
