@@ -1,0 +1,14 @@
+/.idea
+/.vscode
+
+# Unrelated file type
+*.txt
+*.csv
+*.png
+*.pdf
+*.zip
+*.ipynb
+**/submissions/**
+**/submission/**
+**/*data/**
+**/*save/**

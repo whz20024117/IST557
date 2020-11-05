@@ -1,0 +1,22 @@
+Interpreter: Python 3.7
+
+
+Dependencies: 
+- scikit-learn        0.23.2
+- numpy               1.19.1
+- matplotlib          3.3.1
+- pandas              1.1.2
+- xgboost             1.2.0
+
+
+File Description
+- main.py: code for output results and figures for Job 1 to Job 4
+- main_Q5.py: code for Job5; Predict labels for test data
+
+
+Directory Tree:
+./
+|_main.py
+|_main_Q5.py
+|_submissions
+  |_****output files***

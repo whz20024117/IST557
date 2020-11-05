@@ -1,0 +1,1 @@
+{"RegularTree": {"criterion": "gini", "min_samples_leaf": "2", "max_features": "400000"}, "RandomForest": {"Best_n_estimator": "300.0"}, "XGBoost": {"Best_lr": "0.1"}}
