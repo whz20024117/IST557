@@ -91,7 +91,6 @@ reg = XGBRegressor(learning_rate=0.25,
 reg.fit(X_train, y_train)
 
 # Test
-print("Testing....")
 pred = reg.predict(X_val)
 err = mean_squared_error(y_val, pred, squared=False)
 print(err)

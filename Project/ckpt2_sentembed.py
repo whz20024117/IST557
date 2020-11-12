@@ -3,9 +3,6 @@ from sentence_transformers import SentenceTransformer
 import pandas as pd
 from scipy.spatial import distance
 
-import os
-os.chdir(os.getcwd() + '/Project')
-
 
 def _preprocessing():
     # Code from preprocessing.py
