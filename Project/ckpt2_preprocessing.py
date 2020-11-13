@@ -4,8 +4,6 @@ import pandas as pd
 import swifter
 from scipy.spatial import distance
 
-import os
-os.chdir(os.getcwd() + '/Project')
 
 tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
 model = DistilBertModel.from_pretrained('distilbert-base-uncased', return_dict=True)
